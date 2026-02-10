@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flappy Clone</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: #70c5ce;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      background: linear-gradient(#70c5ce, #b3ecff);
+      border: 3px solid black;
+    }
+
+    #info {
+      position: absolute;
+      top: 15px;
+      text-align: center;
+      font-size: 18px;
+      color: white;
+      text-shadow: 1px 1px 3px black;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="info">
+    Press SPACE or Click to Fly
+  </div>
+
+  <canvas id="game" width="400" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    // -------------------------
+    // GAME VARIABLES
+    // -------------------------
+
+    let gameOver = false;
+    let score = 0;
+
+    const gravity = 0.1;
+    const jump = -4;
+
+
+    // -------------------------
+    // BIRD
+    // -------------------------
+
+    const birdImg = new Image();
+    birdImg.src = "bird.png"; // <--- REPLACE THIS
+
+    // Background Image
+    const bgImg = new Image();
+    bgImg.src = "bg.png"; // Your background
+
+    // Pipe Image
+    const pipeImg = new Image();
+    pipeImg.src = "pipe.png"; // Your pipe
+
+    // Game Over Screen Image
+    const gameOverImg = new Image();
+    gameOverImg.src = "gameover.png"; // Your custom screen
+
+
+    const bird = {
+      x: 80,
+      y: 250,
+      width: 40,
+      height: 40,
+      velocity: 0
+    };
+
+    // -------------------------
+    // PIPES
+    // -------------------------
+
+    const pipes = [];
+    const gap = 150;
+    const pipeWidth = 60;
+    const pipeSpeed = 0.8;
+
+    function createPipe() {
+      const topHeight = Math.random() * 200 + 50;
+
+      pipes.push({
+        x: canvas.width,
+        top: topHeight,
+        bottom: canvas.height - topHeight - gap,
+        passed: false
+      });
+    }
+
+    // -------------------------
+    // CONTROLS
+    // -------------------------
+
+    function flap() {
+      if (!gameOver) {
+        bird.velocity = jump;
+      } else {
+        resetGame();
+      }
+    }
+
+    document.addEventListener("keydown", e => {
+      if (e.code === "Space") flap();
+    });
+
+    document.addEventListener("click", flap);
+
+    // -------------------------
+    // RESET
+    // -------------------------
+
+    function resetGame() {
+      gameOver = false;
+      bird.y = 250;
+      bird.velocity = 0;
+      pipes.length = 0;
+      score = 0;
+    }
+
+    // -------------------------
+    // GAME LOOP
+    // -------------------------
+
+    function update() {
+      if (gameOver) return;
+
+      bird.velocity += gravity;
+      bird.y += bird.velocity;
+
+      // Ground / Ceiling
+      if (bird.y < 0 || bird.y + bird.height > canvas.height) {
+        gameOver = true;
+      }
+
+      // Pipes
+      pipes.forEach(pipe => {
+        pipe.x -= pipeSpeed;
+
+        // Score
+        if (!pipe.passed && pipe.x + pipeWidth < bird.x) {
+          pipe.passed = true;
+          score++;
+        }
+
+        // Collision
+        if (
+          bird.x < pipe.x + pipeWidth &&
+          bird.x + bird.width > pipe.x &&
+          (
+            bird.y < pipe.top ||
+            bird.y + bird.height > canvas.height - pipe.bottom
+          )
+        ) {
+          gameOver = true;
+        }
+      });
+
+      // Remove old pipes
+      if (pipes.length && pipes[0].x + pipeWidth < 0) {
+        pipes.shift();
+      }
+    }
+
+    // -------------------------
+    // DRAW
+    // -------------------------
+
+    function draw() {
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+
+      // Bird
+      ctx.drawImage(
+        birdImg,
+        bird.x,
+        bird.y,
+        bird.width,
+        bird.height
+      );
+
+      pipes.forEach(pipe => {
+
+        // Top Pipe (flipped)
+        ctx.save();
+        ctx.scale(1, -1);
+
+        ctx.drawImage(
+            pipeImg,
+            pipe.x,
+            -pipe.top,
+            pipeWidth,
+            pipe.top
+        );
+
+        ctx.restore();
+
+        // Bottom Pipe
+        ctx.drawImage(
+            pipeImg,
+            pipe.x,
+            canvas.height - pipe.bottom,
+            pipeWidth,
+            pipe.bottom
+        );
+
+        });
+
+
+      // Score
+      ctx.fillStyle = "white";
+      ctx.font = "30px Arial";
+      ctx.fillText("Score: " + score, 20, 40);
+
+      // Game Over
+      if (gameOver) {
+
+        // Dark overlay
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Game Over Image
+        const imgWidth = 300;
+        const imgHeight = 200;
+
+        ctx.drawImage(
+            gameOverImg,
+            (canvas.width - imgWidth) / 2,
+            (canvas.height - imgHeight) / 2 - 30,
+            imgWidth,
+            imgHeight
+        );
+
+        // Restart Text
+        ctx.fillStyle = "white";
+        ctx.font = "18px Arial";
+        ctx.textAlign = "center";
+
+        ctx.fillText(
+            "Click or Press Space to Retry",
+            canvas.width / 2,
+            canvas.height / 2 + 120
+        );
+
+        ctx.textAlign = "left";
+        }
+
+    }
+
+    // -------------------------
+    // MAIN LOOP
+    // -------------------------
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // New pipes every 1.5 sec
+    setInterval(createPipe, 2200);
+
+    loop();
+  </script>
+
+</body>
+</html>
